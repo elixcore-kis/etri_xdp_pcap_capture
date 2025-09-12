@@ -1,0 +1,30 @@
+# Compiled binaries
+capture_main
+*.o
+
+# Test files
+*.pcap
+
+# IDE files
+.idea/
+cmake-build-debug/
+.vscode/
+
+# Claude Code files
+.claude/
+
+# Build artifacts
+*.so
+*.a
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Log files
+*.log
+
+# Core dumps
+core
+core.*
