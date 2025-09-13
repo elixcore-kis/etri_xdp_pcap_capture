@@ -29,7 +29,7 @@ struct pcap_pkthdr {
     __u32 len;
 };
 
-#define MAX_PACKET_SIZE 512  // Match XDP program
+#define MAX_PACKET_SIZE 1500  // Match XDP program - standard Ethernet MTU
 
 struct packet_info {
     __u64 timestamp;
@@ -49,21 +49,6 @@ void signal_handler(int sig) {
     (void)sig;
     keep_running = 0;
     printf("\nReceived signal, cleaning up...\n");
-    
-    if (src_ifindex_global > 0) {
-        bpf_xdp_detach(src_ifindex_global, XDP_FLAGS_UPDATE_IF_NOEXIST, NULL);
-        printf("XDP program detached from interface\n");
-    }
-    
-    if (prog_fd_global >= 0) {
-        close(prog_fd_global);
-    }
-    
-    if (output_file_ptr) {
-        fclose(output_file_ptr);
-    }
-    
-    printf("Total packets captured: %d\n", packet_count);
 }
 
 static int get_ifindex(const char *ifname) {
@@ -97,7 +82,7 @@ static int write_pcap_header(FILE *fp) {
     hdr.version_minor = 4;
     hdr.thiszone = 0;
     hdr.sigfigs = 0;
-    hdr.snaplen = MAX_PACKET_SIZE;
+    hdr.snaplen = MAX_PACKET_SIZE;  // Standard 1500 byte MTU support
     hdr.linktype = 1; // DLT_EN10MB (Ethernet)
     
     return fwrite(&hdr, sizeof(hdr), 1, fp) == 1 ? 0 : -1;
@@ -302,11 +287,29 @@ int main(int argc, char *argv[]) {
     printf("Output file: %s\n", output_file);
     
     print_stats();
-    
+
+    // Cleanup resources
     ring_buffer__free(rb);
+
+    if (src_ifindex_global > 0) {
+        bpf_xdp_detach(src_ifindex_global, XDP_FLAGS_UPDATE_IF_NOEXIST, NULL);
+        printf("XDP program detached from interface\n");
+    }
+
+    if (prog_fd_global >= 0) {
+        close(prog_fd_global);
+        prog_fd_global = -1;
+    }
+
+    if (output_file_ptr) {
+        fclose(output_file_ptr);
+        output_file_ptr = NULL;
+    }
+
     if (global_obj) {
         bpf_object__close(global_obj);
+        global_obj = NULL;
     }
-    
+
     return 0;
 }

@@ -7,7 +7,7 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 
-#define MAX_PACKET_SIZE 512  // Optimal size for most network packets
+#define MAX_PACKET_SIZE 1500  // Standard Ethernet MTU
 #define MAX_ENTRIES 1024
 
 struct packet_info {
@@ -89,9 +89,7 @@ int xdp_packet_capture(struct xdp_md *ctx)
     __u8 *src = (__u8*)data;
     __u8 *dst = pkt_info->data;
     
-    #pragma unroll
-    for (__u32 i = 0; i < MAX_PACKET_SIZE; i++) {
-        if (i >= copy_len) break;
+    for (__u32 i = 0; i < MAX_PACKET_SIZE && i < copy_len; i++) {
         if (src + i + 1 > (__u8*)data_end) break;
         dst[i] = src[i];
     }
